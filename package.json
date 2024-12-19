@@ -1,0 +1,12 @@
+{
+  "name": "viewport-sizer",
+  "version": "1.1.0",
+  "description": "A package to set the viewport for browser/website.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Naveen Yadav",
+  "license": "ISC"
+}
