@@ -54,5 +54,24 @@ resize({width:1500, height:900});
 }
 ```
 ### Following css change must be done
-    1. Replace `100vh` with `--custom-vh`
-    1. Replace `100vw` with `--custom-vw`
+    1. Replace `100vh` with `var(--custom-vh)`
+    1. Replace `100vw` with `var(--custom-vw)`
+
+##### Example
+######   replace
+```css
+    body {
+        width:100vw;
+        height:100vh;
+    }
+```
+######   with
+
+```css
+    body {
+        width:var(--custom-vw);
+        height:var(--custom-vh);
+    }
+```
+
+##########Note: css replacement must be done at all the place
