@@ -74,4 +74,4 @@ resize({width:1500, height:900});
     }
 ```
 
-##########Note: css replacement must be done at all the place
+####Note: ######css replacement must be done at all the place
