@@ -19,7 +19,7 @@ export function resize(p) {
 			b.style.cssText = ct + `zoom:${z};`;
 			cw = b.offsetWidth;
 			ds.setProperty("--custom-vw", `${cw}px`);
-			ds.setProperty("--custom-vh", `${h ?? wn.innerHeight / z}px`);
+			ds.setProperty("--custom-vh", `${h ? h : (wn.innerHeight / z)}px`);
 		}
 	} else {
 		while (cw >= w && w > mmt) {
@@ -28,7 +28,7 @@ export function resize(p) {
 			b.style.cssText = ct + `zoom:${z};`;
 			cw = b.offsetWidth;
 			ds.setProperty("--custom-vw", `${cw}px`);
-			ds.setProperty("--custom-vh", `${h ? h : wn.innerHeight / z}px`);
+			ds.setProperty("--custom-vh", `${h ? h : (wn.innerHeight / z)}px`);
 		}
 	}
 }
