@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
   publish:
@@ -20,16 +17,27 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 20
-          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Configure npm
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
-        
+      - name: Check if version is already published
+        id: version_check
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          PUBLISHED_VERSION=$(npm show viewport-sizer version 2>/dev/null || echo "none")
+          echo "local=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "published=$PUBLISHED_VERSION" >> $GITHUB_OUTPUT
+          if [ "$PACKAGE_VERSION" = "$PUBLISHED_VERSION" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Publish to npm
+        if: steps.version_check.outputs.skip == 'false'
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --registry https://registry.npmjs.org/
 
