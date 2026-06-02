@@ -9,7 +9,7 @@ export function resize(p) {
 	if(p) {w = p?.width , h = p?.height }
 	if (w && isNaN(w)) {throw new Error("resize width parameters must be number");}
 	if (h && isNaN(h)) {throw new Error("resize height parameters must be number");}
-	const b = document.body, wn = window, ds = document.documentElement.style;
+	const b = document.body, wn = window;
 	if (!document.querySelector('style[data-viewport-sizer]')) {
 		const s = document.createElement('style');
 		s.setAttribute('data-viewport-sizer', '');
@@ -25,21 +25,20 @@ export function resize(p) {
 	const ct = b.style.cssText;
 	let z = 1;
 	b.style.cssText = ct + `zoom:${z};`;
+	const s = document.querySelector('style[data-viewport-sizer]');
 	if (cw < w) {
 		while (cw <= w && cw > mmt) {
 			z = z - 0.01;
 			b.style.cssText = ct + `zoom:${z};`;
 			cw = b.offsetWidth;
-			ds.setProperty("--cvw", `${cw}px`);
-			ds.setProperty("--cvh", `${h ? h : (wn.innerHeight / z)}px`);
+			s.textContent = `:root { --cvw: ${cw}px; --cvh: ${h ? h : (wn.innerHeight / z)}px; }`;
 		}
 	} else {
 		while (cw >= w && w > mmt) {
 				z = z + 0.01;
 			b.style.cssText = ct + `zoom:${z};`;
 			cw = b.offsetWidth;
-			ds.setProperty("--cvw", `${cw}px`);
-			ds.setProperty("--cvh", `${h ? h : (wn.innerHeight / z)}px`);
+			s.textContent = `:root { --cvw: ${cw}px; --cvh: ${h ? h : (wn.innerHeight / z)}px; }`;
 		}
 	}
 }
