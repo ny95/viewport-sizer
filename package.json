@@ -4,8 +4,20 @@
   "description": "A package to set the viewport for browser/website.",
   "main": "index.js",
   "types": "index.d.ts",
+  "exports": {
+    ".": "./index.js",
+    "./postcss": "./postcss.js"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "peerDependencies": {
+    "postcss": ">=8"
+  },
+  "peerDependenciesMeta": {
+    "postcss": {
+      "optional": true
+    }
   },
   "repository": {
     "type": "git",
@@ -14,6 +26,7 @@
   "files": [
     "index.js",
     "index.d.ts",
+    "postcss.js",
     "LICENSE",
     "README.md"
   ],
