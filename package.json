@@ -3,6 +3,10 @@
   "version": "2.0.2",
   "description": "A package to set the viewport for browser/website.",
   "main": "index.js",
+  "bin": {
+    "viewport-sizer-watch": "./watch.js",
+    "viewport-sizer-replace": "./replace.js"
+  },
   "types": "index.d.ts",
   "exports": {
     ".": "./index.js",
