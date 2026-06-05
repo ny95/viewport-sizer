@@ -1,73 +1,150 @@
 # Viewport Sizer
 
-Simple plugin for auto resizing the browser viewport for the website in Desktop mode.
+A lightweight package that normalises viewport units (`100vw` / `100vh`) across all screen sizes and desktop environments. It sets `--cvw` and `--cvh` CSS variables that accurately reflect the usable viewport, and optionally scales your layout to a target design width using CSS `zoom`.
 
+---
+
+## How it works
+
+1. `resize()` runs in the browser, measures the actual viewport, and sets `--cvw` / `--cvh` on `:root`.
+2. The PostCSS plugin replaces every `100vw` / `100vh` in your CSS files with `var(--cvw)` / `var(--cvh)` at build time.
+3. For inline styles in JS/TS files (React `sx`, Angular `[style]`, Vue `:style`) the file watcher or Claude Code hook handles the replacement on save.
+
+---
 
 ## Install
 
-#### npm
-
-`npm i viewport-sizer`
-
----
-
-## Usage
-
-#### Resize viewport automatically
-```javascript
-var { resize } = require('viewport-sizer');
-
-resize();
-```
-
-#### Set the viewport width manually
-```javascript
-var { resize } = require('viewport-sizer');
-
-resize({ width: 1920 });
-```
-
-#### Set the viewport height manually
-```javascript
-var { resize } = require('viewport-sizer');
-
-resize({ height: 1080 });
-```
-
-#### Set both width and height of the viewport manually
-```javascript
-var { resize } = require('viewport-sizer');
-
-resize({ width: 1500, height: 900 });
+```bash
+npm i viewport-sizer
 ```
 
 ---
 
-## PostCSS plugin (recommended)
+## Quick start — all frameworks
 
-The package ships a built-in PostCSS plugin that automatically replaces `100vw` → `var(--cvw)` and `100vh` → `var(--cvh)` across all your stylesheets at build time — no manual CSS changes needed.
+| Step | What to do |
+|---|---|
+| 1 | Call `resize()` once after the app mounts |
+| 2 | Add the PostCSS plugin to replace viewport units in CSS |
+| 3 | Run the file watcher to replace viewport units in JS/TS inline styles |
 
-**postcss.config.js**
-```js
-module.exports = {
-  plugins: {
-    'viewport-sizer/postcss': {}
+---
+
+## Step 1 — Call `resize()`
+
+### React
+
+```jsx
+// src/index.jsx  or  src/App.jsx
+import { useEffect } from 'react';
+import { resize } from 'viewport-sizer';
+
+function App() {
+  useEffect(() => {
+    resize();           // auto-detect screen width
+    // resize({ width: 1920 });  // or target a specific design width
+  }, []);
+
+  return <YourApp />;
+}
+```
+
+### Next.js (Pages Router — `_app.tsx`)
+
+```tsx
+// src/pages/_app.tsx
+import { useEffect } from 'react';
+import { resize } from 'viewport-sizer';
+
+export default function App({ Component, pageProps }) {
+  useEffect(() => {
+    resize();
+  }, []);
+
+  return <Component {...pageProps} />;
+}
+```
+
+### Vue 3 (Composition API)
+
+```vue
+<!-- src/App.vue -->
+<script setup>
+import { onMounted } from 'vue';
+import { resize } from 'viewport-sizer';
+
+onMounted(() => {
+  resize();
+});
+</script>
+```
+
+### Vue 2 (Options API)
+
+```vue
+<!-- src/App.vue -->
+<script>
+import { resize } from 'viewport-sizer';
+
+export default {
+  mounted() {
+    resize();
+  }
+};
+</script>
+```
+
+### Angular
+
+```typescript
+// src/app/app.component.ts
+import { Component, AfterViewInit } from '@angular/core';
+import { resize } from 'viewport-sizer';
+
+@Component({ selector: 'app-root', templateUrl: './app.component.html' })
+export class AppComponent implements AfterViewInit {
+  ngAfterViewInit() {
+    resize();
   }
 }
 ```
 
-**With Tailwind CSS** — place `viewport-sizer/postcss` after Tailwind so it processes Tailwind's generated CSS:
-```js
-module.exports = {
-  plugins: {
-    tailwindcss: {},
-    'viewport-sizer/postcss': {}
-  }
-}
+### `resize()` options
+
+```javascript
+resize();                              // auto-detect — uses screen.width × devicePixelRatio
+resize({ width: 1920 });               // scale layout to fit a 1920px design width
+resize({ height: 1080 });              // fix viewport height
+resize({ width: 1920, height: 1080 }); // fix both
 ```
 
-**With Vite (vite.config.js)**
+### Automatic re-apply on navigation
+
+You only need to call `resize()` **once**. Internally it patches `history.pushState` and `history.replaceState` and listens to `popstate`, so it re-applies automatically on every client-side route change — no extra framework code needed.
+
+This works out of the box with **Next.js**, **React Router**, **Vue Router**, and **Angular Router** since all of them use the browser History API under the hood.
+
+---
+
+## Step 2 — PostCSS plugin
+
+The PostCSS plugin rewrites `100vw` → `var(--cvw)` and `100vh` → `var(--cvh)` across **all CSS files** at build time.
+
+### React (Create React App / CRACO)
+
 ```js
+// postcss.config.js
+module.exports = {
+  plugins: {
+    'viewport-sizer/postcss': {}
+  }
+};
+```
+
+### React / Vue 3 / Svelte (Vite)
+
+```js
+// vite.config.js
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -79,7 +156,14 @@ export default defineConfig({
 });
 ```
 
-**With Next.js** — Next.js requires plugins to be declared as an object, not using `require()`:
+### Next.js
+
+Next.js requires plugins as an object map (not `require()`). Install the peer deps first:
+
+```bash
+npm i postcss-flexbugs-fixes postcss-preset-env
+```
+
 ```js
 // postcss.config.js
 module.exports = {
@@ -88,59 +172,123 @@ module.exports = {
     'postcss-preset-env': {
       autoprefixer: { flexbox: 'no-2009' },
       stage: 3,
-      features: { 'custom-properties': false },
+      features: { 'custom-properties': false }
     },
-    'viewport-sizer/postcss': {},
-  },
+    'viewport-sizer/postcss': {}
+  }
 };
 ```
 
-Custom variable names are supported via options:
+### Vue 2 (Vue CLI)
+
 ```js
-require('viewport-sizer/postcss')({ vw: '--my-vw', vh: '--my-vh' })
+// postcss.config.js  or  vue.config.js → css.loaderOptions.postcss
+module.exports = {
+  plugins: {
+    'viewport-sizer/postcss': {}
+  }
+};
+```
+
+### Angular
+
+```js
+// postcss.config.js  (place at project root)
+module.exports = {
+  plugins: {
+    'viewport-sizer/postcss': {}
+  }
+};
+```
+
+Angular CLI automatically picks up `postcss.config.js` from the project root.
+
+### With Tailwind CSS (any framework)
+
+Place `viewport-sizer/postcss` **after** Tailwind so it processes Tailwind's generated output:
+
+```js
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+    'viewport-sizer/postcss': {}
+  }
+};
+```
+
+### Custom variable names
+
+```js
+// postcss.config.js
+module.exports = {
+  plugins: {
+    'viewport-sizer/postcss': { vw: '--my-vw', vh: '--my-vh' }
+  }
+};
 ```
 
 ---
 
-## File watcher — auto-replace on save
+## Step 3 — Replace viewport units in inline JS/TS styles
 
-The PostCSS plugin handles `.css` files, but inline styles in `.tsx`/`.jsx`/`.ts`/`.js` files (e.g. MUI `sx={{}}` or `style={{}}` props) are not processed at build time. The built-in file watcher auto-replaces `100vw`, `100vh`, and `100svh` in those files whenever you save.
+The PostCSS plugin only processes `.css` files. Inline styles in component files need separate handling.
 
-#### Start the watcher
+**The problem** — these are NOT processed by PostCSS:
+
+```tsx
+// React / Next.js
+<Box sx={{ width: '100vw', height: '100vh' }} />
+
+// Vue
+<div :style="{ width: '100vw', height: '100vh' }"></div>
+
+// Angular
+<div [style.width]="'100vw'" [style.height]="'100vh'"></div>
+```
+
+**The fix** — use `var(--cvw)` / `var(--cvh)` directly:
+
+```tsx
+<Box sx={{ width: 'var(--cvw)', height: 'var(--cvh)' }} />
+```
+
+### Option A — File watcher (recommended)
+
+Run alongside your dev server. Automatically replaces `100vw`, `100vh`, and `100svh` in any `.tsx`/`.ts`/`.jsx`/`.js` file the moment you save it.
 
 ```bash
 npx viewport-sizer-watch src
 ```
 
-Or add it to your `package.json` scripts and run alongside your dev server:
+Add to `package.json` to run it as part of your workflow:
 
 ```json
 {
   "scripts": {
+    "dev": "vite",
     "watch:viewport": "viewport-sizer-watch src"
   }
 }
 ```
 
+Run both in parallel:
+
 ```bash
-npm run watch:viewport
+npm run watch:viewport &  npm run dev
 ```
 
-The watcher targets the directory you pass as an argument (defaults to `src` if omitted). It replaces:
+### Option B — One-time bulk replacement
 
-| Before | After |
-|---|---|
-| `100vw` | `var(--cvw)` |
-| `100vh` | `var(--cvh)` |
-| `100svh` | `var(--cvh)` |
+Run once to fix all existing files in your project:
 
-This includes values inside `calc()` expressions, e.g. `calc(100vh - 80px)` → `calc(var(--cvh) - 80px)`.
+```bash
+npx viewport-sizer-replace src
+```
 
----
+### Option C — Claude Code hook (AI-assisted development)
 
-## Claude Code hook — auto-replace on every AI edit
-
-If you use [Claude Code](https://claude.ai/code), you can wire up a hook so that every file Claude edits is automatically fixed. Create `.claude/settings.json` in your project root:
+If you use [Claude Code](https://claude.ai/code), add this to `.claude/settings.json` in your project root. Every file Claude edits is automatically fixed:
 
 ```json
 {
@@ -161,31 +309,48 @@ If you use [Claude Code](https://claude.ai/code), you can wire up a hook so that
 }
 ```
 
-The hook reads the edited file path from Claude Code's stdin JSON and runs the replacement automatically after every edit.
+### Replacement table
+
+| Before | After |
+|---|---|
+| `100vw` | `var(--cvw)` |
+| `100vh` | `var(--cvh)` |
+| `100svh` | `var(--cvh)` |
+| `calc(100vh - 80px)` | `calc(var(--cvh) - 80px)` |
+| `calc(100vw - 240px)` | `calc(var(--cvw) - 240px)` |
 
 ---
 
-## Manual replacement
+## Manual CSS replacement
 
-The `resize()` call automatically injects `--cvw` and `--cvh` defaults into `:root`. If you prefer to replace values by hand:
-
-1. Replace `100vh` with `var(--cvh)`
-2. Replace `100vw` with `var(--cvw)`
+If you prefer not to use PostCSS, replace the values in your CSS files by hand:
 
 **Before**
 ```css
 body {
-    width: 100vw;
-    height: 100vh;
+  width: 100vw;
+  height: 100vh;
 }
 ```
 
 **After**
 ```css
 body {
-    width: var(--cvw);
-    height: var(--cvh);
+  width: var(--cvw);
+  height: var(--cvh);
 }
 ```
 
-> **Note:** CSS replacement must be done in all places. Use the file watcher or PostCSS plugin to avoid doing this manually.
+> The `resize()` call automatically injects the `--cvw` and `--cvh` defaults into `:root`, so you do not need to define them yourself.
+
+---
+
+## Framework integration summary
+
+| Framework | `resize()` location | PostCSS config | Inline style fix |
+|---|---|---|---|
+| React | `useEffect` in root component | `postcss.config.js` | File watcher / replace CLI |
+| Next.js | `useEffect` in `_app.tsx` | `postcss.config.js` (object form) | File watcher / replace CLI |
+| Vue 3 | `onMounted` in `App.vue` | `postcss.config.js` or `vite.config.js` | File watcher / replace CLI |
+| Vue 2 | `mounted` in `App.vue` | `postcss.config.js` or `vue.config.js` | File watcher / replace CLI |
+| Angular | `ngAfterViewInit` in `AppComponent` | `postcss.config.js` at project root | File watcher / replace CLI |
