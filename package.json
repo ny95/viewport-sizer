@@ -1,6 +1,6 @@
 {
   "name": "viewport-sizer",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "A package to set the viewport for browser/website.",
   "main": "index.js",
   "bin": {
@@ -31,6 +31,8 @@
     "index.js",
     "index.d.ts",
     "postcss.js",
+    "replace.js",
+    "watch.js",
     "LICENSE",
     "README.md"
   ],

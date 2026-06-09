@@ -1,14 +1,21 @@
 # Viewport Sizer
 
-A lightweight package that normalises viewport units (`100vw` / `100vh`) across all screen sizes and desktop environments. It sets `--cvw` and `--cvh` CSS variables that accurately reflect the usable viewport, and optionally scales your layout to a target design width using CSS `zoom`.
+A lightweight package that normalises all viewport unit variants for **laptop and desktop screens**. Each unit maps to its own CSS custom property so the original semantic intent is preserved on every device.
 
----
+| CSS written | Custom property | Desktop value | Mobile value |
+|---|---|---|---|
+| `100vw` | `var(--cvw)` | scaled `px` | `100vw` |
+| `100svw` | `var(--csvw)` | same scaled `px` | `100svw` |
+| `100dvw` | `var(--cdvw)` | same scaled `px` | `100dvw` |
+| `100lvw` | `var(--clvw)` | same scaled `px` | `100lvw` |
+| `100vh` | `var(--cvh)` | scaled `px` | `100vh` |
+| `100svh` | `var(--csvh)` | same scaled `px` | `100svh` |
+| `100dvh` | `var(--cdvh)` | same scaled `px` | `100dvh` |
+| `100lvh` | `var(--clvh)` | same scaled `px` | `100lvh` |
 
-## How it works
+On **desktop / laptop (≥ 1024 px)** all width variables share the same scaled pixel value and all height variables share the same scaled pixel value — because `svw = dvw = lvw = vw` and `svh = dvh = lvh = vh` on desktop (no collapsing browser chrome).
 
-1. `resize()` runs in the browser, measures the actual viewport, and sets `--cvw` / `--cvh` on `:root`.
-2. The PostCSS plugin replaces every `100vw` / `100vh` in your CSS files with `var(--cvw)` / `var(--cvh)` at build time.
-3. For inline styles in JS/TS files (React `sx`, Angular `[style]`, Vue `:style`) the file watcher or Claude Code hook handles the replacement on save.
+On **mobile / tablet (< 1024 px)** each variable reverts to its own native unit so the browser resolves `svh`, `dvh`, and `lvh` correctly (collapsing address bar behaviour is preserved).
 
 ---
 
@@ -58,7 +65,7 @@ import { resize } from 'viewport-sizer';
 
 export default function App({ Component, pageProps }) {
   useEffect(() => {
-    resize();
+    resize({ width: 3840 }); // target design width in px
   }, []);
 
   return <Component {...pageProps} />;
@@ -113,14 +120,20 @@ export class AppComponent implements AfterViewInit {
 
 ```javascript
 resize();                              // auto-detect — uses screen.width × devicePixelRatio
-resize({ width: 1920 });               // scale layout to fit a 1920px design width
+resize({ width: 1920 });               // scale layout to fit a 1920 px design width
 resize({ height: 1080 });              // fix viewport height
 resize({ width: 1920, height: 1080 }); // fix both
 ```
 
-### Automatic re-apply on navigation
+### Automatic re-apply on navigation and resize
 
-You only need to call `resize()` **once**. Internally it patches `history.pushState` and `history.replaceState` and listens to `popstate`, so it re-applies automatically on every client-side route change — no extra framework code needed.
+You only need to call `resize()` **once**. Internally it sets up three automatic triggers — all of which always use the **latest** params passed to `resize()`:
+
+| Trigger | Behaviour |
+|---|---|
+| `window` resize (debounced 150 ms) | Re-runs on every viewport width change. Crossing 1024 px switches between desktop scaling and the mobile fallback automatically. |
+| `popstate` event | Re-runs on browser back / forward navigation. |
+| `history.pushState` / `history.replaceState` patch | Re-runs on every client-side route change. |
 
 This works out of the box with **Next.js**, **React Router**, **Vue Router**, and **Angular Router** since all of them use the browser History API under the hood.
 
@@ -128,7 +141,7 @@ This works out of the box with **Next.js**, **React Router**, **Vue Router**, an
 
 ## Step 2 — PostCSS plugin
 
-The PostCSS plugin rewrites `100vw` → `var(--cvw)` and `100vh` → `var(--cvh)` across **all CSS files** at build time.
+The PostCSS plugin rewrites all eight viewport unit variants in **every CSS file** at build time. Each unit maps to its own custom property (see the table at the top).
 
 ### React (Create React App / CRACO)
 
@@ -219,11 +232,22 @@ module.exports = {
 
 ### Custom variable names
 
+All eight variable names are configurable:
+
 ```js
 // postcss.config.js
 module.exports = {
   plugins: {
-    'viewport-sizer/postcss': { vw: '--my-vw', vh: '--my-vh' }
+    'viewport-sizer/postcss': {
+      vw:  '--my-vw',
+      svw: '--my-svw',
+      dvw: '--my-dvw',
+      lvw: '--my-lvw',
+      vh:  '--my-vh',
+      svh: '--my-svh',
+      dvh: '--my-dvh',
+      lvh: '--my-lvh',
+    }
   }
 };
 ```
@@ -247,15 +271,16 @@ The PostCSS plugin only processes `.css` files. Inline styles in component files
 <div [style.width]="'100vw'" [style.height]="'100vh'"></div>
 ```
 
-**The fix** — use `var(--cvw)` / `var(--cvh)` directly:
+**The fix** — use the custom properties directly:
 
 ```tsx
 <Box sx={{ width: 'var(--cvw)', height: 'var(--cvh)' }} />
+<Box sx={{ height: 'var(--csvh)' }} /> {/* preserves svh intent on mobile */}
 ```
 
 ### Option A — File watcher (recommended)
 
-Run alongside your dev server. Automatically replaces `100vw`, `100vh`, and `100svh` in any `.tsx`/`.ts`/`.jsx`/`.js` file the moment you save it.
+Run alongside your dev server. Automatically replaces all viewport units inside **string literals** in any `.tsx` / `.ts` / `.jsx` / `.js` file the moment you save it. Replacements are scoped to string literals only — comments and non-CSS identifiers are left untouched.
 
 ```bash
 npx viewport-sizer-watch src
@@ -309,13 +334,18 @@ If you use [Claude Code](https://claude.ai/code), add this to `.claude/settings.
 }
 ```
 
-### Replacement table
+### Replacement table (PostCSS + file watcher)
 
 | Before | After |
 |---|---|
 | `100vw` | `var(--cvw)` |
+| `100svw` | `var(--csvw)` |
+| `100dvw` | `var(--cdvw)` |
+| `100lvw` | `var(--clvw)` |
 | `100vh` | `var(--cvh)` |
-| `100svh` | `var(--cvh)` |
+| `100svh` | `var(--csvh)` |
+| `100dvh` | `var(--cdvh)` |
+| `100lvh` | `var(--clvh)` |
 | `calc(100vh - 80px)` | `calc(var(--cvh) - 80px)` |
 | `calc(100vw - 240px)` | `calc(var(--cvw) - 240px)` |
 
@@ -327,21 +357,40 @@ If you prefer not to use PostCSS, replace the values in your CSS files by hand:
 
 **Before**
 ```css
-body {
+.full-screen {
   width: 100vw;
-  height: 100vh;
+  height: 100svh; /* small viewport height for mobile chrome */
 }
 ```
 
 **After**
 ```css
-body {
+.full-screen {
   width: var(--cvw);
-  height: var(--cvh);
+  height: var(--csvh);
 }
 ```
 
-> The `resize()` call automatically injects the `--cvw` and `--cvh` defaults into `:root`, so you do not need to define them yourself.
+> `resize()` automatically injects all eight variable defaults into `:root` — you do not need to define them yourself.
+
+---
+
+## Desktop-only design
+
+This plugin is intentionally built for **laptop and desktop layouts only**. The zoom-and-scale logic assumes a wide viewport and a fixed design width. It must not run on narrow mobile viewports.
+
+### Breakpoint behaviour
+
+| Viewport width | Width vars | Height vars | `body` zoom |
+|---|---|---|---|
+| ≥ 1024 px (laptop / desktop) | Same scaled `px` value for `--cvw`, `--csvw`, `--cdvw`, `--clvw` | Same scaled `px` value for `--cvh`, `--csvh`, `--cdvh`, `--clvh` | Calculated to fit design width |
+| < 1024 px (mobile / tablet) | `--cvw: 100vw` `--csvw: 100svw` `--cdvw: 100dvw` `--clvw: 100lvw` | `--cvh: 100vh` `--csvh: 100svh` `--cdvh: 100dvh` `--clvh: 100lvh` | Reset to `''` (no zoom) |
+
+The 1024 px threshold is fixed inside the library. Crossing it in either direction — by resizing the browser window or rotating a device — switches modes within 150 ms.
+
+### Why all variants share the same value on desktop
+
+On desktop browsers there is no collapsing address bar or navigation chrome, so `svh = dvh = lvh = vh` and `svw = dvw = lvw = vw`. Using separate variables preserves the semantic intent of the original unit: on mobile the browser resolves each one correctly, on desktop they all collapse to the same scaled pixel value.
 
 ---
 

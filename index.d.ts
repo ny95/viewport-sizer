@@ -2,4 +2,5 @@ export interface ResizeOptions {
     width?: number;
     height?: number;
 }
-export function resize(options?: ResizeOptions): void;
+
+export declare function resize(options?: ResizeOptions): void;
